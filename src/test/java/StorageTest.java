@@ -1,4 +1,6 @@
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -6,22 +8,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.*;
-
 public class StorageTest {
 
-    @Test
-    public void get() {
-        // создаем объект storage и кладем в него некоторые данные с помощью метода set
-        Storage storage = new Storage();
+    Storage storage = new Storage();
+    List<Integer> listOfIntegers = new ArrayList<>();
+    List<String> listOfStrings = new ArrayList<>();
+
+    Map<Object, Object> expectedMap = new HashMap<>();
+
+
+    @Before
+    public void setUp() throws Exception {
+        // заполняем storage некоторыми данными с помощью метода set
         storage.set("server:name", "fido");
 
-        List<Integer> listOfIntegers = new ArrayList<>();
         listOfIntegers.add(1);
         listOfIntegers.add(2);
         listOfIntegers.add(3);
 
-        List<String> listOfStrings = new ArrayList<>();
         listOfStrings.add("one");
         listOfStrings.add("two");
         listOfStrings.add("three");
@@ -30,89 +34,71 @@ public class StorageTest {
 
         storage.set(123, "one-two-three");
 
-        // проверяем что полученные с помощью метода get данные соответсвуют искомым
+        // заполняем словарь такими же данными
 
-        Assert.assertEquals(storage.get(123), "one-two-three");
-        Assert.assertEquals(storage.get(listOfIntegers), listOfStrings);
-        Assert.assertEquals(storage.get("server:name"), "fido");
+        expectedMap.put("server:name", "fido");
+        expectedMap.put(listOfIntegers, listOfStrings);
+        expectedMap.put(123, "one-two-three");
+    }
 
-        // если ключ равен null, пустой или не существует
-
-        Assert.assertEquals("Key should not be null", storage.get(null));
-        Assert.assertEquals("Key should not be empty/blank", storage.get(" "));
-        Assert.assertEquals("Key should not be empty/blank", storage.get(""));
-        Assert.assertEquals("nil", storage.get("foo"));
-
+    @After
+    public void cleanTheStorage() {
         storage.deleteAll();
     }
 
     @Test
-    public void set() {
-        // создаем объект storage и кладем в него некоторые данные с помощью метода set
-        Storage storage = new Storage();
-        storage.set("server:name", "fido");
+    public void get() {
+        // проверяем что метод get работает правильно при наличии ключа и в случае приемлемого содержимого
+        Assert.assertEquals(storage.get(123), "one-two-three");
+        Assert.assertEquals(storage.get(listOfIntegers), listOfStrings);
+        Assert.assertEquals(storage.get("server:name"), "fido");
+    }
 
-        List<Integer> listOfIntegers = new ArrayList<>();
-        listOfIntegers.add(1);
-        listOfIntegers.add(2);
-        listOfIntegers.add(3);
+    @Test
+    public void get_NOT_NULL() {
+        Assert.assertEquals("Key should not be null", storage.get(null));
+    }
 
-        List<String> listOfStrings = new ArrayList<>();
-        listOfStrings.add("one");
-        listOfStrings.add("two");
-        listOfStrings.add("three");
+    @Test
+    public void get_NOT_BLANK() {
+        Assert.assertEquals("Key should not be empty/blank", storage.get(" "));
+        Assert.assertEquals("Key should not be empty/blank", storage.get(""));
+    }
 
-        storage.set(listOfIntegers, listOfStrings);
+    @Test
+    public void get_NOT_EXISTS() {
+        Assert.assertEquals("nil", storage.get("foo"));
+    }
 
-        storage.set(123, "one-two-three");
-
-        // создаем словарь с такими же данными
-
-        Map<Object, Object> expectedMap = new HashMap<>();
-        expectedMap.put("server:name", "fido");
-        expectedMap.put(listOfIntegers, listOfStrings);
-        expectedMap.put(123, "one-two-three");
-
-        // проверяем что они равны
-
+    @Test
+    public void set_IF_EXISTS() {
+        // проверяем что данные в storage и expectedMap равны
         Assert.assertEquals(expectedMap, Storage.storage);
-
-        // проверяем правильную работу метода если ключ равен null, пустой, уже существует, не существует
-
-        Assert.assertEquals("Key should not be null", storage.set(null, null));
-        Assert.assertEquals("Key should not be empty/blank", storage.set("", ""));
-        Assert.assertEquals("Key should not be empty/blank", storage.set(" ", " "));
-
+        // проверяем правильную работу метода если ключ уже существует
         Assert.assertEquals("Key overwritten", storage.set(123, "one and two and three"));
         Assert.assertTrue(storage.storage.containsKey(123));
+    }
+
+    @Test
+    public void set_IF_NOT_EXISTS() {
         Assert.assertEquals("OK", storage.set(345, "three-four-five"));
         Assert.assertTrue(storage.storage.containsKey(345));
+    }
 
-        storage.deleteAll();
+    @Test
+    public void set_NOT_NULL() {
+        Assert.assertEquals("Key should not be null", storage.set(null, null));
+    }
+
+    @Test
+    public void set_NOT_BLANK() {
+        Assert.assertEquals("Key should not be empty/blank", storage.set("", ""));
+        Assert.assertEquals("Key should not be empty/blank", storage.set(" ", " "));
     }
 
     @Test
     public void delete() {
-        // создаем объект storage и кладем в него некоторые данные с помощью метода set
-        Storage storage = new Storage();
-        storage.set("server:name", "fido");
-
-        List<Integer> listOfIntegers = new ArrayList<>();
-        listOfIntegers.add(1);
-        listOfIntegers.add(2);
-        listOfIntegers.add(3);
-
-        List<String> listOfStrings = new ArrayList<>();
-        listOfStrings.add("one");
-        listOfStrings.add("two");
-        listOfStrings.add("three");
-
-        storage.set(listOfIntegers, listOfStrings);
-
-        storage.set(123, "one-two-three");
-
         // проверяем что метод delete удаляет данные из storage и возвращает последнее значение по ключу
-
         Assert.assertEquals(storage.get("server:name"), storage.delete("server:name"));
         Assert.assertFalse(storage.storage.containsValue("fido"));
         Assert.assertEquals(storage.get(123), storage.delete(123));
@@ -120,80 +106,38 @@ public class StorageTest {
         Assert.assertEquals(storage.get(listOfIntegers), storage.delete(listOfIntegers));
         Assert.assertFalse(storage.storage.containsValue(listOfStrings));
         Assert.assertTrue(storage.storage.isEmpty());
+    }
+    @Test
+    public void delete_NOT_NULL() {
+        Assert.assertEquals("Key should not be null", storage.delete(null));
+    }
 
-        // если ключ равен null, пустой или не существует
-
-        Assert.assertEquals("Key should not be null", storage.get(null));
-        Assert.assertEquals("Key should not be empty/blank", storage.get(" "));
-        Assert.assertEquals("Key should not be empty/blank", storage.get(""));
-        Assert.assertEquals("nil", storage.get("foo"));
-
-        storage.deleteAll();
+    @Test
+    public void delete_NOT_BLANK() {
+        Assert.assertEquals("Key should not be empty/blank", storage.delete(" "));
+        Assert.assertEquals("Key should not be empty/blank", storage.delete(""));
+    }
+    @Test
+    public void delete_NOT_EXISTS() {
+        Assert.assertEquals("nil", storage.delete("foo"));
     }
 
     @Test
     public void keys() {
-        // создаем объект storage и кладем в него некоторые данные с помощью метода set
-        Storage storage = new Storage();
-        storage.set("server:name", "fido");
-
-        List<Integer> listOfIntegers = new ArrayList<>();
-        listOfIntegers.add(1);
-        listOfIntegers.add(2);
-        listOfIntegers.add(3);
-
-        List<String> listOfStrings = new ArrayList<>();
-        listOfStrings.add("one");
-        listOfStrings.add("two");
-        listOfStrings.add("three");
-
-        storage.set(listOfIntegers, listOfStrings);
-
-        storage.set(123, "one-two-three");
-
-        // создаем словарь с такими же данными
-
-        Map<Object, Object> expectedMap = new HashMap<>();
-        expectedMap.put("server:name", "fido");
-        expectedMap.put(listOfIntegers, listOfStrings);
-        expectedMap.put(123, "one-two-three");
-
-        // проверяем что метод keys не возвращает null в случае если storage заполнен данными
-
-        Assert.assertFalse(storage.keys().isEmpty());
-
         // проверяем что метод keys возвращает искомый сет значений по ключу
-
         Assert.assertEquals(expectedMap.keySet(), storage.keys());
+    }
 
+    @Test
+    public void keys_NOT_NULL() {
         storage.deleteAll();
+        Assert.assertNotNull(storage.keys());
     }
 
     @Test
     public void deleteAll() {
-        Storage storage = new Storage();
-        storage.set("server:name", "fido");
-
-        List<Integer> listOfIntegers = new ArrayList<>();
-        listOfIntegers.add(1);
-        listOfIntegers.add(2);
-        listOfIntegers.add(3);
-
-        List<String> listOfStrings = new ArrayList<>();
-        listOfStrings.add("one");
-        listOfStrings.add("two");
-        listOfStrings.add("three");
-
-        storage.set(listOfIntegers, listOfStrings);
-
-        storage.set(123, "one-two-three");
-
-        // проверяем что storage не пустой
-
+        // проверяем что storage не пустой, потом все из него удаляем и проверяем что он пустой
         Assert.assertFalse(storage.storage.isEmpty());
-
-        // проверяем что после удаления storage пустой
-
         storage.deleteAll();
         Assert.assertTrue(storage.storage.isEmpty());
     }

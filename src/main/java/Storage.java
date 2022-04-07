@@ -43,7 +43,7 @@ public class Storage {
         return "nil";
     }
 
-    public Set<Object> keys() {
+    public Object keys() {
         return storage.keySet();
     }
 
